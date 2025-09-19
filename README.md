@@ -1,5 +1,10 @@
 # Sumo Robots for Outreach – NP SOE MR Course
 
+## 📷 Media
+
+Check out the robots in action here:  
+👉 [Instagram Reel](https://www.instagram.com/reel/DOiXAfOkolM/)
+
 ## 📖 Project Concept
 This project combines the excitement of **traditional sumo bots** with the competitive elements of **battle bots**, creating a simple, fun, and entertaining outreach game.  
 Designed for the NP School of Engineering (SOE) MR course, these robots are used to engage students and showcase robotics in an interactive way.
@@ -33,5 +38,7 @@ The full Bill of Materials used for the construction of the robots can be found 
 - ESP32-based control for wireless communication and smooth performance.  
 - Specialised motor shield for integrated motor, servo, and LED management.  
 - Interactive and entertaining gameplay mechanics.  
+
+
 
 
