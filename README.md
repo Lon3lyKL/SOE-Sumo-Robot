@@ -4,11 +4,15 @@
 
 ### Robot Photos & Demo
 
-<img src="images/img_1209.JPG" alt="Robot Photo" width="50%">
+<div style="display: flex; align-items: center;">
+  <img src="images/img_1209.JPG" alt="Robot Photo" width="45%">
+  <img src="images/IMG_1524.gif" alt="Robot Demo" width="33.5%">
+</div>
 
 
-<video src="images/IMG_1524.mp4" width="50%" autoplay loop muted playsinline>
-</video>
+
+
+
 
 Check out the robots in action here:  
 👉 [Instagram Reel](https://www.instagram.com/reel/DOiXAfOkolM/)
