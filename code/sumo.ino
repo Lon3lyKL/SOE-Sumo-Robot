@@ -18,8 +18,8 @@ const int button = 16;
 const int strip = 14;
 const int num_pixels = 3;
 
-int RStickY = 0;
 int RStickX = 0;
+int LStickY = 0;
 int L2 = 0;
 int R2 = 0;
 int lives = 3;
@@ -65,9 +65,8 @@ void updateLives(int count) {
   ws2812b.show();
 }
 
-// Flash the first 2 LEDs twice
 void flashFirstTwo(int delayTime) {
-  for (int j = 0; j < 2; j++) {           // repeat twice
+  for (int j = 0; j < 6; j++) {           // repeat twice
     // Turn first 2 LEDs on
     for (int i = 0; i < 2; i++) {
       ws2812b.setPixelColor(i, ws2812b.Color(0, 255, 0));
@@ -76,7 +75,7 @@ void flashFirstTwo(int delayTime) {
     delay(delayTime);
 
     // Turn first 2 LEDs off
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 6; i++) {
       ws2812b.setPixelColor(i, ws2812b.Color(0, 0, 0));
     }
     ws2812b.show();
@@ -86,7 +85,7 @@ void flashFirstTwo(int delayTime) {
 
 // Flash only the first LED twice
 void flashFirstOne(int delayTime) {
-  for (int j = 0; j < 2; j++) {
+  for (int j = 0; j < 6; j++) {
     // Turn first LED on
     ws2812b.setPixelColor(0, ws2812b.Color(0, 255, 0));
     ws2812b.show();
@@ -147,75 +146,128 @@ void setup() {
   pinMode(Rmotor2, OUTPUT);
   pinMode(button, INPUT_PULLUP);
   digitalWrite(button, LOW);
+
+  ledcSetup(2, 5000, 8);
+  ledcSetup(3, 5000, 8);
+  ledcSetup(4, 5000, 8);
+  ledcSetup(5, 5000, 8);
+  ledcAttachPin(Lmotor1, 2);
+  ledcAttachPin(Lmotor2, 3);
+  ledcAttachPin(Rmotor1, 4);
+  ledcAttachPin(Rmotor2, 5);
 }
 
-void MotorA(int y) {
-  if (y == 0) {
-    digitalWrite(Lmotor1, LOW);
-    digitalWrite(Lmotor2, LOW);
-  } else if (y > 0) {
-    digitalWrite(Lmotor1, HIGH);
-    digitalWrite(Lmotor2, LOW);
-  } else {
-    digitalWrite(Lmotor1, LOW);
-    digitalWrite(Lmotor2, HIGH);
+void MotorA(int LY, int RX) {
+  if (LY == 0) { // No input
+    ledcWrite(2, 0);
+    ledcWrite(3, 0);
+  } else if (LY > 0) { // Up
+    ledcWrite(2, map(LY, 0, 1024, 400, 525));
+    ledcWrite(3, 0);
+  } else if (LY < 0) { // Down
+    ledcWrite(2, 0);
+    ledcWrite(3, map(LY, 0, -1024, 400, 525));
+  }
+  if (RX < 0) { // Left
+    ledcWrite(2, 0);
+    ledcWrite(3, map(RX, 0, -1024, 400, 525));
+  }
+  if (RX > 0) { // Right
+    ledcWrite(2, map(RX, 0, 1024, 400, 525));
+    ledcWrite(3, 0);
+  }
+
+}
+
+void MotorB(int LY, int RX) {
+  if (LY == 0) { // No input
+    ledcWrite(4, 0);
+    ledcWrite(5, 0);
+  } else if (LY > 0) { // Up
+    ledcWrite(4, map(LY, 0, 1024, 400, 525));
+    ledcWrite(5, 0);
+  } else if (LY < 0) { // Down
+    ledcWrite(4, 0);
+    ledcWrite(5, map(LY, 0, -1024, 400, 525));
+  }
+  if (RX < 0) { // Left
+    ledcWrite(4, map(RX, 0, -1024, 400, 525));
+    ledcWrite(5, 0);
+  }
+  if (RX > 0) { // Right
+    ledcWrite(4, 0);
+    ledcWrite(5, map(RX, 0, 1024, 400, 525));
   }
 }
 
-void MotorB(int y) {
-  if (y == 0) {
-    digitalWrite(Rmotor1, LOW);
-    digitalWrite(Rmotor2, LOW);
-  } else if (y > 0) {
-    digitalWrite(Rmotor1, HIGH);
-    digitalWrite(Rmotor2, LOW);
-  } else {
-    digitalWrite(Rmotor1, LOW);
-    digitalWrite(Rmotor2, HIGH);
-  }
-}
+const unsigned long servoActiveTime = 500; // time servo stays in active position
+const unsigned long servoReturnTime = 300; // time allowed for servo to return
 
-// Timing variables
-unsigned long leftServoStartTime = 0;
-bool leftServoActive = false; // is the sequence running?
-bool leftServoReady = true; // ready for a new trigger
+// Timing and state variables
+unsigned long leftStartTime = 0;
+bool leftActiveFlag = false;
+bool leftReturningFlag = false;
+bool leftReady = true;
 
-unsigned long rightServoStartTime = 0;
-bool rightServoActive = false;
-bool rightServoReady = true;
-
-const unsigned long servoActiveTime = 500; // ms duration
+unsigned long rightStartTime = 0;
+bool rightActiveFlag = false;
+bool rightReturningFlag = false;
+bool rightReady = true;
 
 void updateServos() {
-  // LEFT SERVO (original = 0, active = 90)
-  if (L2 && leftServoReady) {
-    leftServo.write(90); // activate
-    leftServoStartTime = millis();
-    leftServoActive = true;
-    leftServoReady = false; // block until released
-  }
+    unsigned long currentTime = millis();
 
-  if (leftServoActive && (millis() - leftServoStartTime >= servoActiveTime)) {
-    leftServo.write(0); // return to original
-    leftServoActive = false;
-  }
+    // ---------------- LEFT SERVO ----------------
+    if (!leftActiveFlag && !leftReturningFlag && leftReady && L2 > 0) {
+        leftServo.write(90);
+        leftStartTime = currentTime;
+        leftActiveFlag = true;
+        leftReady = false;
+    }
 
-  if (!L2) leftServoReady = true; // allow retrigger after release
+    // Check if active time is over -> start returning
+    if (leftActiveFlag && (currentTime - leftStartTime >= servoActiveTime)) {
+        leftServo.write(0);
+        leftActiveFlag = false;
+        leftReturningFlag = true;
+        leftStartTime = currentTime; // reuse for return timing
+    }
 
-  // RIGHT SERVO (original = 90, active = 0)
-  if (R2 && rightServoReady) {
-    rightServo.write(0); // activate
-    rightServoStartTime = millis();
-    rightServoActive = true;
-    rightServoReady = false;
-  }
+    // Check if return time is over -> servo ready again
+    if (leftReturningFlag && (currentTime - leftStartTime >= servoReturnTime)) {
+        leftReturningFlag = false;
+    }
 
-  if (rightServoActive && (millis() - rightServoStartTime >= servoActiveTime)) {
-    rightServo.write(90); // return to original
-    rightServoActive = false;
-  }
+    // Allow new trigger only when fully returned and input released
+    if (!leftActiveFlag && !leftReturningFlag && !leftReady && L2 == 0) {
+        leftReady = true;
+    }
 
-  if (!R2) rightServoReady = true; // allow retrigger after release
+    // ---------------- RIGHT SERVO ----------------
+    if (!rightActiveFlag && !rightReturningFlag && rightReady && R2 > 0) {
+        rightServo.write(0);
+        rightStartTime = currentTime;
+        rightActiveFlag = true;
+        rightReady = false;
+    }
+
+    // Check if active time is over -> start returning
+    if (rightActiveFlag && (currentTime - rightStartTime >= servoActiveTime)) {
+        rightServo.write(90);
+        rightActiveFlag = false;
+        rightReturningFlag = true;
+        rightStartTime = currentTime; // reuse for return timing
+    }
+
+    // Check if return time is over -> servo ready again
+    if (rightReturningFlag && (currentTime - rightStartTime >= servoReturnTime)) {
+        rightReturningFlag = false;
+    }
+
+    // Allow new trigger only when fully returned and input released
+    if (!rightActiveFlag && !rightReturningFlag && !rightReady && R2 == 0) {
+        rightReady = true;
+    }
 }
 
 void flashRainbow(int delayTime) {
@@ -245,8 +297,8 @@ void loop() {
   for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
     ControllerPtr ctl = myControllers[i];
     if (ctl && ctl->isConnected() && ctl->hasData() && ctl->index() == 0) {
-      if (ctl->axisRY() == -4) RStickY = 0; else RStickY = map(ctl->axisRY(), 508, -512, -1024, 1024);
       if (ctl->axisRX() == -4) RStickX = 0; else RStickX = map(ctl->axisRX(), 508, -512, 1024, -1024);
+      if (ctl->axisY() == -4) LStickY = 0; else LStickY = map(ctl->axisY(), 508, -512, -1024, 1024);
       L2 = ctl->l2();
       R2 = ctl->r2();
       rainbow = (ctl->buttons() & 0x000f) == 0x000f;
@@ -255,50 +307,33 @@ void loop() {
   if (lives > 0) {
     updateServos();
 
-  //Theta calculation
-  if (RStickX == 0 && RStickY > 0) {
-    theta = 90;
-  } else if (RStickX == 0 && RStickY < 0) {
-    theta = -90;
-  } else if (RStickX == 0 && RStickY == 0) {
-    theta = 0;
-  } else {
-    theta = atan(static_cast<float>(RStickY) / RStickX) * 180.0 / PI;
+  MotorA(LStickY, RStickX);
+  MotorB(LStickY, RStickX);
 
-    if (RStickX < 0 && RStickY >= 0) {
-      theta += 180;  // Adjust the angle to handle negative X direction
-    } else if (RStickX < 0 && RStickY < 0) {
-      theta -= 180;  // Third quadrant (X negative, Y negative)
+  static unsigned long lastPressTime = 0;  // store the time of last valid press
+  const unsigned long cooldown = 2000;     // 2 seconds
+
+  if (digitalRead(button) == HIGH) {
+    if (millis() - lastPressTime >= cooldown) {
+      lives -= 1;
+      lastPressTime = millis();  // reset cooldown timer
     }
   }
-
-    //MotorA(LStickY);
-    //MotorB(RStickY);
-
-    static unsigned long lastPressTime = 0;  // store the time of last valid press
-    const unsigned long cooldown = 2000;     // 2 seconds
-
-    if (digitalRead(button) == HIGH) {
-      if (millis() - lastPressTime >= cooldown) {
-        lives -= 1;
-        lastPressTime = millis();  // reset cooldown timer
-      }
-    }
-    updateLives(lives);
-    if (lives == 2 && !flashed2) {
-      flashFirstTwo(150);
-      flashed2 = true;
-    }
-    if (lives == 1 && !flashed) {
-      flashFirstOne(150);
-      flashed = true;
-    }
+  updateLives(lives);
+  if (lives == 2 && !flashed2) {
+    flashFirstTwo(150);
+    flashed2 = true;
+  }
+  if (lives == 1 && !flashed) {
+    flashFirstOne(150);
+    flashed = true;
+  }
   }
   if (lives == 0) {
-    digitalWrite(Rmotor1, LOW);
-    digitalWrite(Rmotor2, LOW);
-    digitalWrite(Lmotor1, LOW);
-    digitalWrite(Lmotor2, LOW);
+    ledcWrite(2, 0);
+    ledcWrite(3, 0);
+    ledcWrite(4, 0);
+    ledcWrite(5, 0);
     leftServo.write(0);
     rightServo.write(90);
     flashRed();
@@ -318,12 +353,11 @@ void loop() {
   }
 
   if (rainbow) flashRainbow(150);
-  Serial.print("RX: ");
+
+  Serial.print("LY: ");
+  Serial.print(LStickY);
+  Serial.print("\tRX: ");
   Serial.print(RStickX);
-  Serial.print("\tRY: ");
-  Serial.print(RStickY);
-  Serial.print("\ttheta: ");
-  Serial.print(theta);
   Serial.print("\tL2: ");
   Serial.print(L2);
   Serial.print("\tR2: ");
