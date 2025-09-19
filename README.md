@@ -2,8 +2,20 @@
 
 ## 📷 Media
 
+### Robot Photos & Demo
+
+<img src="images/img_1209.JPG" alt="Robot Photo" width="50%">
+
+
+<video src="images/IMG_1524.mp4" width="50%" autoplay loop muted playsinline>
+</video>
+
 Check out the robots in action here:  
 👉 [Instagram Reel](https://www.instagram.com/reel/DOiXAfOkolM/)
+
+
+
+
 
 ## 📖 Project Concept
 This project combines the excitement of **traditional sumo bots** with the competitive elements of **battle bots**, creating a simple, fun, and entertaining outreach game.  
